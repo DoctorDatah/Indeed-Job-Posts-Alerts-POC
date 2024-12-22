@@ -1,6 +1,8 @@
 import threading
 import time
 import processing.latest_emails 
+import auth.gmail_auth
+
 
 
 # Global variable to control the fetching process
@@ -20,6 +22,9 @@ def start_email_fetch(service, senders, error_recipient, interval=10):
         interval (int): Time interval (in seconds) between email fetch attempts.
     """
     global is_fetching, fetch_thread
+
+    # refreching gmail auth
+    service = auth.gmail_auth.authenticate_gmail()
 
     if is_fetching:
         print("Email fetching is already running.")
