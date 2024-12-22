@@ -1,3 +1,4 @@
+import os 
 import auth.gmail_auth
 import utils.html_module 
 import scraping.scrap_job_blocks
@@ -6,7 +7,6 @@ import processing.latest_emails
 import scraping.overall_scrap
 import listener.gmail_listener
 import processing.logs
-
 import tkinter as tk
 from tkinter import ttk, messagebox, Toplevel
 from datetime import datetime
@@ -14,6 +14,11 @@ from tkinter.scrolledtext import ScrolledText  # Import ScrolledText for better 
 import threading
 import time
 from bs4 import BeautifulSoup
+from tkinter import ttk, messagebox, Toplevel
+from datetime import datetime
+import threading
+import os
+import subprocess
 
 SEARCH_SENDERS = ["malikhqtech@gmail.com", "alert@indeed.com", "noreply@example.com"] 
 LABEL_NAME_SUCCESS = "fetched_by_app"
