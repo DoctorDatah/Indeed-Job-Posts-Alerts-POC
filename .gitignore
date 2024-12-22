@@ -5,6 +5,7 @@ data/
 _secrets
 logs
 data
+*.exe
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
