@@ -1,0 +1,18 @@
+# Exclude the data folder
+data/
+
+# Exclude the logs folder
+logs/
+
+# Exclude the _secrets folder
+_secrets/
+
+# Exclude .git folder (optional, if you don’t want to include version control data)
+.git/
+
+# Exclude .ipynb_checkpoints (Jupyter notebook checkpoints)
+.ipynb_checkpoints/
+
+# Exclude Python cache files
+__pycache__/
+*.pyc

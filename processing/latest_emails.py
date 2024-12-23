@@ -12,6 +12,7 @@ import scraping.scrap_job_blocks
 import scraping.scrap_job_elements
 from collections import deque
 import logging
+import datetime
 
 logging.basicConfig(level=logging.error)
 
@@ -110,7 +111,8 @@ def scrape_email_content(html_content, metadata, labels, service, email_id):
     Scrape the email's HTML content and save extracted data.
     """
     try:
-        soup = BeautifulSoup(html_content.encode('utf-8', 'replace'), 'html.parser')
+#        soup = BeautifulSoup(html_content.encode('utf-8', 'replace'), 'html.parser')
+        soup = BeautifulSoup(html_content,'html.parser')
         scraping.overall_scrap.scrap_process_email_content_to_csv(soup)
         logging.info(f"Scraping successful for email: {metadata['subject']}")
     except Exception as e:

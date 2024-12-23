@@ -8,82 +8,105 @@ import scraping.scrap_job_blocks
 from datetime import datetime, timedelta
 import pandas as pd
 from bs4 import BeautifulSoup
-
+import re
 
 logging.basicConfig(level=logging.INFO)
 
-
 def get_individual_job(soup):
     """
-    Dynamically scrape job title, link, location, and days posted from the job HTML.
+    Extract job details from the given BeautifulSoup object, handling potential HTML structure variations.
+
     Args:
-        soup (BeautifulSoup): Parsed BeautifulSoup object of the job's HTML.
+        soup (BeautifulSoup): Parsed BeautifulSoup object of the page.
+
     Returns:
-        pd.DataFrame: A DataFrame containing the job title, link, location, days posted, posting date, and fetched date.
+        pd.DataFrame: A DataFrame containing job details.
     """
-    job_data = {"title": [], "link": [], "location": [], "days_posted": [], "posting_date": [], "fetched_date": []}
+    # Prepare DataFrame from <tr> elements
+    rows = soup.find_all('tr')
+##    logging.info(f"Found {len(rows)} <tr> elements.")
 
-    # Identify potential links for the title
-    link_tags = soup.find_all('a', href=True)
-    rating_tag = None
+    data = []
+    for idx, row in enumerate(rows, start=1):  # Start numbering at 1
+        # Extract text content and links from the row
+        columns = [td.text.strip() for td in row.find_all('td')]
+        link = row.find('a', href=True)  # Find the first <a> tag with href attribute
+        row_data = {
+            "Number": idx,
+            "TR HTML": str(row),
+            "Link": link['href'] if link else None,  # Add the link if present
+        }
+        # Dynamically add data columns
+        for i, col in enumerate(columns, start=1):
+            row_data[f"Data {i}"] = col
+        data.append(row_data)
 
-    # Dynamically locate the rating
-    for tag in soup.find_all():
-        if tag.name == "td" and tag.find("img", alt=True) and "rating" in tag.img['alt'].lower():
-            rating_tag = tag
-            break
+    tr_df = pd.DataFrame(data)
 
-    # Ensure the title link comes before the rating tag
-    if rating_tag:
-        for link in link_tags:
-            if link and link.find_next() == rating_tag.find_parent():  # Check relative position
-                job_data['title'].append(link.text.strip())
-                job_data['link'].append(link['href'])  # Capture the link URL
-                break
+    # Process the DataFrame based on the specified logic
+    job_data = {
+        "title": None,
+        "link": None,
+        "company": None,
+        "rating": None,
+        "location": None,
+        "type": None,
+        "description": None,
+        "days_posted": None,
+        "days": None
+    }
 
-    # Dynamically find the location (text following the rating)
-    if rating_tag:
-        location_tag = rating_tag.find_next(string=True)
-        if location_tag:
-            job_data['location'].append(location_tag.strip())
-        else:
-            job_data['location'].append(None)
+    for _, row in tr_df.iterrows():
+        number = row['Number']
 
-    # Dynamically find the days posted
-    date_labels = ["days ago", "day ago", "just posted"]
-    days_posted_found = False
-    for tag in soup.find_all(string=True):
-        if any(label in tag.lower() for label in date_labels):
-            job_data['days_posted'].append(tag.strip())
-            days_posted_found = True
-            break
-
-    if not days_posted_found:
-        job_data['days_posted'].append(None)
-
-    # Calculate the posting date and fetched date
-    current_date = datetime.now()
-    for days_posted in job_data['days_posted']:
-        if days_posted:
-            if "just posted" in days_posted.lower():
-                posting_date = current_date
-            elif "day ago" in days_posted.lower() or "days ago" in days_posted.lower():
-                days = int(''.join(filter(str.isdigit, days_posted)))
-                posting_date = current_date - timedelta(days=days)
+        # Assign values based on the row number logic
+        if number == 1:
+            job_data['title'] = row.get('Data 1', None)
+            job_data['link'] = row.get('Link', None)
+        elif number == 3:
+            job_data['company'] = row.get('Data 1', None)
+            job_data['rating'] = row.get('Data 2', None)
+        elif number == 4:
+            location_text = row.get('Data 1', None)
+            if location_text and '•' in location_text:
+                location_parts = location_text.split('•')
+                job_data['location'] = location_parts[0].strip()
+                job_data['type'] = location_parts[1].strip()
             else:
-                posting_date = None
+                job_data['location'] = location_text
+                job_data['type'] = None
+        elif number == len(tr_df):
+            job_data['days_posted'] = row.get('Data 1', None)
+        elif number == len(tr_df) - 1:
+            job_data['description'] = row.get('Data 1', None)
+
+    # Add posting_date, fetched_date, and calculate days
+    current_date = datetime.now()
+    days_posted_text = job_data['days_posted']
+
+    if days_posted_text:
+        if "day" in days_posted_text.lower():
+            # Extract numeric value of days
+            days_ago = int(''.join(filter(str.isdigit, days_posted_text))) if any(c.isdigit() for c in days_posted_text) else 1
+            posting_date = current_date - timedelta(days=days_ago)
+            job_data['days'] = days_ago
+        elif "just posted" in days_posted_text.lower():
+            posting_date = current_date
+            job_data['days'] = 0
         else:
-            posting_date = None
+            posting_date = current_date
+            job_data['days'] = None
+    else:
+        posting_date = None
+        job_data['days'] = None
 
-        job_data['posting_date'].append(posting_date.strftime('%Y-%m-%d') if posting_date else None)
+    job_data['posting_date'] = posting_date.strftime('%Y-%m-%d') if posting_date else None
+    job_data['fetched_date'] = current_date.strftime('%Y-%m-%d')
 
-        # Add fetched date as the current date
-        job_data['fetched_date'].append(current_date.strftime('%Y-%m-%d'))
+    # Convert job_data to DataFrame
+    job_df = pd.DataFrame([job_data])
 
-    # Convert the data dictionary to a DataFrame
-    job_df = pd.DataFrame(job_data)
+    # Print final individual DataFrame
+ #   print(job_df)
 
     return job_df
-
-
-
