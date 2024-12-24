@@ -25,8 +25,8 @@ def start_email_fetch(service, senders, error_recipient, interval=10):
     """
     global is_fetching, fetch_thread
 
-    # Refreshing Gmail auth
-    service = auth.gmail_auth.authenticate_gmail()
+    # # Refreshing Gmail auth
+    # service = auth.gmail_auth.authenticate_gmail()
 
     if is_fetching:
         print("Email fetching is already running.")
@@ -39,6 +39,10 @@ def start_email_fetch(service, senders, error_recipient, interval=10):
         try:
             while is_fetching:
                 try:
+
+                    # Keep revalidating gmail auth
+                    service = auth.gmail_auth.authenticate_gmail()
+                    
                     processing.latest_emails.process_emails_with_transaction(
                         service, senders, error_recipient
                     )
@@ -61,20 +65,17 @@ def start_email_fetch(service, senders, error_recipient, interval=10):
     print("Email fetching started.")
 
 
+# def signal_handler(signum, frame):
+#     print(f"Signal {signum} received. Cleaning up...")
+#     stop_email_fetch(service, error_recipient)
+
 def signal_handler(signum, frame):
     print(f"Signal {signum} received. Cleaning up...")
-    stop_email_fetch(service, error_recipient)
+    stop_email_fetch(None, None)
+    os._exit(0)  # Ensure the program exits cleanly
 
- 
 
-
-def stop_email_fetch(service, user_email):
-    """
-    Stop the email fetching process and send a notification email.
-
-    :param service: Authenticated Gmail service object.
-    :param user_email: Recipient's email address to send the notification.
-    """
+def stop_email_fetch(service=None, user_email=None):
     global is_fetching, fetch_thread
 
     if not is_fetching:
@@ -89,13 +90,13 @@ def stop_email_fetch(service, user_email):
 
     print("Email fetching stopped.")
 
-    # Send notification email
-    send_email(
-        service=service,
-        to_email=user_email,
-        subject="Scraper Stopped",
-        body="The email scraper has been stopped."
-    )
+    if service and user_email:
+        send_email(
+            service=service,
+            to_email=user_email,
+            subject="Scraper Stopped",
+            body="The email scraper has been stopped."
+        )
 
 
 def send_email(service, to_email, subject, body):
